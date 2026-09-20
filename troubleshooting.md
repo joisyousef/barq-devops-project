@@ -185,7 +185,7 @@ These results showed that NGINX could resolve both backend services.
 - Related commit: e757fbc13f5131b8116a2c435523c3236da61e8f
 - Remaining uncertainty: none
 ---
-## Entry 9 — 2026-09-20
+## Entry 9 — 2026-09-20 - 18:51:26
 - Symptom: containers run as root even though the Dockerfile creates
   a dedicated non-root user.
 - Hypothesis: Dockerfile creates the app user and chowns files to it,
@@ -200,5 +200,23 @@ These results showed that NGINX could resolve both backend services.
   results: "app"
   cbd88cad72ce   barq-assessment-app-01   "python -m app.server"   43 minutes ago   Up 43 minutes (healthy)   8080/tcp                 app-01
   7f5ebc04374f   barq-assessment-app-02   "python -m app.server"   43 minutes ago   Up 43 minutes (healthy)   8080/tcp                 app-02
-- Related commit: <hash>
+- Related commit: 3cc0a84b3a358a0f7445856bb4d9046c62d76040
 - Remaining uncertainty: none 
+---
+## Entry 10 — 2026-09-20
+- Symptom: Dockerfile copies config/app.env (with the real Postgres
+  password) directly into the image.
+- Hypothesis: redundant — compose's env_file already injects the
+  same variables at runtime, so this COPY only exists to leak the
+  secret into a permanent image layer.
+- Command: docker exec app-01 ls -la /srv/app.env
+- Actual output: -rw-r--r--. 1 root root 112 Sep 19 20:13 /srv/app.env
+- Failed attempt: none.
+- Root cause: unnecessary COPY config/app.env /srv/app.env line in
+  the Dockerfile.
+- Fix: deleted the line.
+- Retest evidence: ls: cannot access '/srv/app.env': No such file or directory
+  confirm app still starts and passes healthcheck via docker compose ps]
+- Related commit: <hash>
+- Remaining uncertainty: none
+---
