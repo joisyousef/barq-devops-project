@@ -56,6 +56,32 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
 - Fix: changed APP_HOST to 0.0.0.0 in the x-app anchor.
 - Retest: same command now returns 200. also force-recreated app-01
   and app-02 since env vars don't update on a plain restart.
-- Related commit: <hash>
+- Related commit: e3c1090550d2d9194fb7573ea6871631ca4a4e71
 - Remaining uncertainty: still need to check nginx can actually reach
   app-01.
+---
+## Entry 3 — 2026-09-19
+- Symptom: hitting nginx repeatedly gave inconsistent results — some
+  requests worked, some didn't, no obvious pattern at first.
+- Hypothesis: nginx round-robins between app-01 and app-02, so if only
+  one of them is misconfigured in the upstream block, it'd explain
+  intermittent failures.
+- Command: docker exec nginx wget -qO- http://localhost/health, run
+  several times in a row.
+- Actual output: alternating success and failure — consistent with
+  every other request (the app-01 ones) failing.
+- Failed attempt: initially thought it was still the APP_HOST bug,
+  but that was already fixed and verified in entry 2. checked
+  nginx.conf next instead.
+- Root cause: nginx.conf upstream block pointed app-01 at port 8081.
+  app-01 actually listens on 8080 (matches Dockerfile EXPOSE and
+  APP_PORT). app-02's entry already correctly said 8080.
+- Fix: changed app-01's upstream port from 8081 to 8080 in
+  nginx/nginx.conf.
+- Retest: ran the wget loop again, all requests succeeded this time.
+- Related commit: <hash>
+- Remaining uncertainty: nginx's own published port (81 vs its
+  actual listen 80) is still broken, so this only proves nginx can
+  reach app-01 internally — haven't proven external access works yet.
+  and I seem to have an issue is SELinux on my Fedora it is blocking Docker bind mounts.
+  I will fix it in the next commit.
