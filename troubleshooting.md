@@ -121,5 +121,36 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
 - Fix: changed the value to "app-02".
 - Retest: force-recreated app-02, docker exec app-02 env | grep
   INSTANCE_ID now shows app-02.
-- Related commit: <hash>
+- Related commit: f748027512529a176eca2e869b9190f722aa5d75
 - Remaining uncertainty: none for this one.
+---
+## Entry 7 — 2026-09-20
+- Symptom: nginx was on both frontend and backend networks, meaning
+  it had a direct path to postgres and redis even though it only
+  ever needs to talk to app-01/app-02.
+- Hypothesis: task requires nginx to have no path to the databases,
+  dropping backend from its networks list should remove that path
+  entirely since Docker's DNS only resolves names within a shared
+  network.
+- Command: docker exec nginx getent hosts postgres
+           docker exec nginx getent hosts redis
+- Actual output: 172.18.0.2 postgres postgres
+                 172.18.0.3 redis redis
+These results showed that NGINX could resolve both backend services.
+- Failed attempt: none for this fix specifically. Also tried curl -i
+  http://localhost:8080/health as an extra check and got "Connection
+  reset by peer" — but that's the separate.
+- Root cause: nginx service in docker-compose.yml listed backend in
+  its networks, which it never needed for its actual job (proxying
+  to app-01/app-02, both reachable via frontend).
+- Fix: removed backend from nginx's networks list.
+- Retest evidence:
+   docker exec nginx getent hosts postgres
+  (no output)
+   docker exec nginx getent hosts redis
+  (no output)
+  Empty output means DNS resolution failed for both — nginx can no
+  longer see either hostname, confirming it has no path to them.
+- Related commit: <hash>
+- Remaining uncertainty: curl to :8080 still fails, but
+  that's the known, unfixed nginx port-mapping bug
