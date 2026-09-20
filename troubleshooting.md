@@ -86,7 +86,7 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
   and I seem to have an issue is SELinux on my Fedora it is blocking Docker bind mounts.
   I will fix it in the next commit.
 ---
-## Entry 4 — 2026-09-20 
+## Entry 4 — 2026-09-20 - 03:44:08
 - Symptom: docker compose up starts containers, but postgres and nginx keep exiting with “Permission denied”. 
   ls: /docker-entrypoint-initdb.d/01-init.sql: Permission denied 
   nginx: [emerg] open() "/etc/nginx/nginx.conf" failed (13: Permission denied)
@@ -107,7 +107,7 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
 - Related commit: a3cfb78dd99cdf3b760b6c871123291735ef7247
 - Remaining uncertainty: none on this specific issue.
 ---
-## Entry 5 — 2026-09-20
+## Entry 5 — 2026-09-20 - 06:31:03
 - Symptom: both app-01 and app-02 report instance_id "app-01" in logs
   and /instance responses.
 - Hypothesis: app-02's environment override in docker-compose.yml
@@ -124,7 +124,7 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
 - Related commit: f748027512529a176eca2e869b9190f722aa5d75
 - Remaining uncertainty: none for this one.
 ---
-## Entry 7 — 2026-09-20
+## Entry 7 — 2026-09-20 - 16:58:32
 - Symptom: nginx was on both frontend and backend networks, meaning
   it had a direct path to postgres and redis even though it only
   ever needs to talk to app-01/app-02.
@@ -155,7 +155,7 @@ These results showed that NGINX could resolve both backend services.
 - Remaining uncertainty: curl to :8080 still fails, but
   that's the known, unfixed nginx port-mapping bug
 ---
-## Entry 8 — 2026-09-20
+## Entry 8 — 2026-09-20 - 18:02:54
 - Symptom: curl -i http://localhost:8080/health from the host returned
   "Recv failure: Connection reset by peer" even after fixing
   APP_HOST, the upstream port, and nginx's network membership.
@@ -182,6 +182,23 @@ These results showed that NGINX could resolve both backend services.
     Cache-Control: no-store
 
     {"instance_id":"app-01","service":"barq-api","status":"alive","version":"2.0.0"}
-- Related commit: <hash>
+- Related commit: e757fbc13f5131b8116a2c435523c3236da61e8f
 - Remaining uncertainty: none
 ---
+## Entry 9 — 2026-09-20
+- Symptom: containers run as root even though the Dockerfile creates
+  a dedicated non-root user.
+- Hypothesis: Dockerfile creates the app user and chowns files to it,
+  but then sets USER root right before CMD, undoing it.
+- Command: docker exec app-01 whoami
+- Actual output: "root"
+- Failed attempt: none.
+- Root cause: Dockerfile had USER root as the final USER directive
+  before CMD.
+- Fix: removed USER root, replaced with USER app.
+- Retest evidence: docker exec app-01 whoami 
+  results: "app"
+  cbd88cad72ce   barq-assessment-app-01   "python -m app.server"   43 minutes ago   Up 43 minutes (healthy)   8080/tcp                 app-01
+  7f5ebc04374f   barq-assessment-app-02   "python -m app.server"   43 minutes ago   Up 43 minutes (healthy)   8080/tcp                 app-02
+- Related commit: <hash>
+- Remaining uncertainty: none 
