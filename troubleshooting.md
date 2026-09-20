@@ -220,7 +220,7 @@ These results showed that NGINX could resolve both backend services.
 - Related commit: d36e114870a5a60d259922baf8901c51235e4540
 - Remaining uncertainty: none
 ---
-## Entry 11 — 2026-09-20
+## Entry 11 — 2026-09-20 - 20:11:04
 - Symptom: needed to check whether Postgres data survives a
   container recreate, since the task requires it to.
 - Hypothesis: the named volume was mounted at
@@ -243,5 +243,54 @@ LINE 1: SELECT * FROM selftest;
 ----+-----------
   1 | test-persistence
 (1 row)
-- Related commit: <hash>
+- Related commit: 3a48c7a23f2fe0cb96f6a434dca3fb67c67acb8a
 - Remaining uncertainty: none
+---
+## Entry 12 — 2026-09-20
+- Symptom: /ready reported redis "unavailable"; /counter failed with
+  {"error":"redis_unavailable"}.
+- Hypothesis: REDIS_URL in config/app.env used port 6380; redis
+  actually listens on 6379.
+- Command: curl /ready and /counter before and after the fix +
+  force-recreate.
+- Actual output (before): {"dependencies":{"redis":"unavailable",...}},
+  {"error":"redis_unavailable",...}
+- Failed attempt: initially ran the same curls right after editing
+  the file but before force-recreating app-01/app-02 — got identical
+  failing output, which confirmed (again) that env var edits don't
+  apply without a recreate.
+- Root cause: config/app.env's REDIS_URL pointed at port 6380 instead
+  of redis's actual port, 6379.
+- Fix: corrected the port in REDIS_URL to 6379.
+- Retest evidence: after docker compose up -d --force-recreate app-01
+  app-02, /ready shows "redis":"ready"; /counter returns
+  {"counter":1,"instance_id":"app-02",...}.
+- Related commit: <hash>
+- Remaining uncertainty: none for redis specifically. Postgres, edited
+  in the same file at the same time, is still unavailable — tracked
+  separately below since it's a distinct, unresolved problem.
+---
+## Entry 13 — 2026-09-20
+- Symptom: after correcting the last character of the password in
+  config/app.env's DATABASE_URL and force-recreating app-01/app-02,
+  /ready still reports postgres "unavailable" and /records still
+  fails with {"error":"postgres_unavailable"}.
+- Hypothesis: not sure yet — could still be an auth mismatch, could
+  be something else entirely. Need the actual log line to know
+  which.
+- Command or test: corrected the password digit, force-recreated
+  app-01 and app-02, reran curl /ready and /records.
+- Actual output: dependencies.postgres still "unavailable" after the
+  fix — no change from before.
+- Failed attempt and what changed your thinking: assumed the wrong
+  password digit was the only problem, since that's what
+  docker compose config revealed. Fixing it alone didn't resolve
+  the connection, so there's something else going on — haven't
+  checked postgres's own logs yet for the actual rejection reason.
+- Root cause: not yet confirmed.
+- Fix: not yet applied.
+- Retest evidence: pending.
+- Related commit: none yet — investigation only.
+- Remaining uncertainty: need to check docker compose logs postgres
+  for the actual error (auth failure vs. connection refused vs.
+  something else) before guessing further.
