@@ -85,3 +85,24 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
   reach app-01 internally — haven't proven external access works yet.
   and I seem to have an issue is SELinux on my Fedora it is blocking Docker bind mounts.
   I will fix it in the next commit.
+---
+## Entry 4 — 2026-09-20 
+- Symptom: docker compose up starts containers, but postgres and nginx keep exiting with “Permission denied”. 
+  ls: /docker-entrypoint-initdb.d/01-init.sql: Permission denied 
+  nginx: [emerg] open() "/etc/nginx/nginx.conf" failed (13: Permission denied)
+- Hypothesis: SELinux on my Fedora is blocking Docker bind mounts for the init SQL and nginx.conf files, not Unix permissions.
+- Command or test: docker compose logs postgres --tail=50, docker compose logs nginx --tail=20, 
+  namei -l /home/yousef/Documents/ProjectBARQ/BARQ-Academy/nginx/nginx.conf
+- Actual output: Repeated Permission denied inside containers for bind-mounted files. 
+  namei showed normal Unix permissions (-rw-r--r-- yousef yousef nginx.conf).
+- Failed attempt and what changed your thinking: Everytime I do docker-compose up --build,
+  I see the selinux notification pop up, and the Permission denied” pattern got me thinking of selinux immediately.
+- Root cause: SELinux preventing containers from accessing host files bind-mounted into postgres and nginx because the mounts lacked an SELinux relabel flag.
+- Fix: edited docker-compose.yml to add :z to the problematic bind mounts: 
+  ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,z 
+  ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro,z
+- Retest evidence: docker compose logs postgres --tail=50 no longer shows Permission denied for 01-init.sql. 
+  docker compose logs nginx --tail=20 no longer shows open() "/etc/nginx/nginx.conf" failed (13: Permission denied). 
+  docker compose ps -a shows postgres and nginx staying up (not repeatedly exiting).
+- Related commit:
+- Remaining uncertainty:
