@@ -203,7 +203,7 @@ These results showed that NGINX could resolve both backend services.
 - Related commit: 3cc0a84b3a358a0f7445856bb4d9046c62d76040
 - Remaining uncertainty: none 
 ---
-## Entry 10 — 2026-09-20
+## Entry 10 — 2026-09-20 - 19:40:04
 - Symptom: Dockerfile copies config/app.env (with the real Postgres
   password) directly into the image.
 - Hypothesis: redundant — compose's env_file already injects the
@@ -217,6 +217,31 @@ These results showed that NGINX could resolve both backend services.
 - Fix: deleted the line.
 - Retest evidence: ls: cannot access '/srv/app.env': No such file or directory
   confirm app still starts and passes healthcheck via docker compose ps]
-- Related commit: <hash>
+- Related commit: d36e114870a5a60d259922baf8901c51235e4540
 - Remaining uncertainty: none
 ---
+## Entry 11 — 2026-09-20
+- Symptom: needed to check whether Postgres data survives a
+  container recreate, since the task requires it to.
+- Hypothesis: the named volume was mounted at
+  /var/lib/postgresql/backup, not Postgres's real data directory —
+  and the real data dir, /var/lib/postgresql/data, was overridden by
+  tmpfs, which is memory-backed and wiped on every restart.
+- Command: created a test row, force-recreated postgres, checked if
+  the row survived. $ docker exec postgres psql -U barq_app -d barq_tasks -c "CREATE TABLE IF NOT EXISTS selftest(id serial primary key, val text); INSERT INTO selftest(val) VALUES ('test-persistence');"
+- Actual output: $ docker exec postgres psql -U barq_app -d barq_tasks -c "SELECT * FROM selftest;"
+ERROR:  relation "selftest" does not exist
+LINE 1: SELECT * FROM selftest;
+                      ^
+- Failed attempt: none.
+- Root cause: postgres-data volume mounted to the wrong path
+  the real data directory sat on tmpfs.
+- Fix: remounted postgres-data to /var/lib/postgresql/data, removed
+  the tmpfs override.
+- Retest evidence: docker exec postgres psql -U barq_app -d barq_tasks -c "SELECT * FROM selftest;"
+ id |    val    
+----+-----------
+  1 | test-persistence
+(1 row)
+- Related commit: <hash>
+- Remaining uncertainty: none
