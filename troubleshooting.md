@@ -151,6 +151,37 @@ These results showed that NGINX could resolve both backend services.
   (no output)
   Empty output means DNS resolution failed for both — nginx can no
   longer see either hostname, confirming it has no path to them.
-- Related commit: <hash>
+- Related commit: 3b7a19d64db5a53026e5c81c4571bb1f0d16b3c6
 - Remaining uncertainty: curl to :8080 still fails, but
   that's the known, unfixed nginx port-mapping bug
+---
+## Entry 8 — 2026-09-20
+- Symptom: curl -i http://localhost:8080/health from the host returned
+  "Recv failure: Connection reset by peer" even after fixing
+  APP_HOST, the upstream port, and nginx's network membership.
+- Hypothesis: docker-compose.yml maps host 8080 to container port 81,
+  but nginx.conf's server block listens on 80 — nothing is actually
+  listening on 81 inside the container.
+- Command: curl -i http://localhost:8080/health, before and after.
+- Actual output: curl: (56) Recv failure: Connection reset by peer
+- Failed attempt: none new — this was already flagged when first
+  reading the files, just hadn't been fixed yet.
+- Root cause: nginx service's port mapping pointed at container port
+  81 nginx.conf listens on 80.
+- Fix: changed the compose port mapping to forward to container
+  port 80.
+- Retest evidence: 
+    HTTP/1.1 200 OK
+    Server: nginx/1.28.3
+    Date: Sun, 20 Sep 2026 15:01:31 GMT
+    Content-Type: application/json
+    Content-Length: 81
+    Connection: keep-alive
+    X-Instance-ID: app-01
+    X-Request-ID: 437dd1479f36ecf1861eb2545758b11b
+    Cache-Control: no-store
+
+    {"instance_id":"app-01","service":"barq-api","status":"alive","version":"2.0.0"}
+- Related commit: <hash>
+- Remaining uncertainty: none
+---
