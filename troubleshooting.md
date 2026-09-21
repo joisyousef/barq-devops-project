@@ -334,13 +334,13 @@ LINE 1: SELECT * FROM selftest;
 - Failed attempt: none.
 - Root cause: --save "" --appendonly no explicitly disabled and /data had no backing volume anyway.
 - Fix: enabled appendonly, added a named redis-data volume at /data.
-- Retest evidence: `docker exec redis redis-cli SET selftest hello
-  OK`
-  `docker compose up -d --force-recreate redis
+- Retest evidence: docker exec redis redis-cli SET selftest hello
+  OK
+  docker compose up -d --force-recreate redis
   [+] up 1/1
-  ✔ Container redis Started`
-  `docker exec redis redis-cli GET selftest
-   hello`
+  ✔ Container redis Started
+  docker exec redis redis-cli GET selftest
+   hello
 - Related commit: fdb96c56630bc2b3088386071ec366d4b7e9578f
 - Remaining uncertainty: none.
 ---
@@ -361,3 +361,21 @@ LINE 1: SELECT * FROM selftest;
   under the redis service.
 - Related commit: <hash>
 - Remaining uncertainty: none
+---
+## Entry 17 — 2026-09-21
+- Symptom: Services lacked explicit restart policies/resource limits, and NGINX had no independent liveness endpoint.
+- Hypothesis: Add restart: unless-stopped, CPU/memory limits, and an NGINX-only healthcheck.
+- Command:
+  docker compose config -q
+  docker compose up -d --build --force-recreate
+  docker compose ps
+  docker exec nginx wget -qO- http://127.0.0.1/nginx-health
+  docker inspect nginx --format '{{.State.Health.Status}}'
+- Actual output: Compose validation succeeded; all 5 containers started. /nginx-health returned ok; NGINX health status was healthy.
+- Failed attempt: None.
+- Root cause: Required operational controls were missing from the service configuration.
+- Fix: Added unless-stopped restart policies, CPU/memory limits, and the /nginx-health endpoint with a Compose healthcheck.
+- Retest evidence: NGINX healthcheck returned ok and status healthy. Restart policies/resource limits still need separate runtime verification.
+- Related commit: [hash]
+- Remaining uncertainty: Resource-limit values should be tuned using real production usage.
+---
