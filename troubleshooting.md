@@ -435,3 +435,24 @@ LINE 1: SELECT * FROM selftest;
 - Remaining uncertainty: didn't investigate the exact resolver
   mechanism producing ~7-8s specifically the fix addresses the
   client-visible symptom rather than the DNS timeout at its source.
+---
+## Entry 20 — 2026-09-21
+- Symptom: validate.py was a stub ("NOT IMPLEMENTED"), so there was
+  no repeatable way to confirm the whole stack end-to-end.
+- Hypothesis: n/a 
+- Command: ./validate.py
+- Actual output: PASS on all 9 checks (public access, /health,
+  /ready, /records create+list, /counter, both backends via
+  /instance, nginx cannot resolve postgres/redis, no published
+  db/cache ports) — RESULT: PASS.
+- Failed attempt: none.
+- Root cause: n/a.
+- Fix: implemented validate.py with bounded-wait HTTP checks against
+  every required endpoint, network isolation checks (reusing the
+  getent pattern from Entry 7), and a check that postgres/redis have
+  no published host ports. PASS/FAIL per check, non-zero exit on any
+  failure.
+- Retest evidence: exit code 0 after all 9 checks pass.
+- Related commit: <hash>
+- Remaining uncertainty: none.
+---
