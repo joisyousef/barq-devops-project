@@ -379,7 +379,7 @@ LINE 1: SELECT * FROM selftest;
 - Related commit: b2b907d47b633bb4e173491d68ce5143445e82c2
 - Remaining uncertainty: Resource-limit values should be tuned using real production usage.
 ---
-## Entry 18 — 2026-09-21
+## Entry 18 — 2026-09-21 - 21:09:22
 - Symptom: PostgreSQL password was stored directly in `docker-compose.yml`.
 - Hypothesis: Move the password to a runtime environment variable instead of storing it in Compose.
 - Command:
@@ -397,5 +397,41 @@ LINE 1: SELECT * FROM selftest;
   docker compose ps showed postgres and redis healthy and all five containers running.
   GET /ready returned postgres and redis as "ready".
   POST /records successfully created record id=11.
-  GET /records returned the newly created record.- Related commit: [hash]
+  GET /records returned the newly created record.
+- Related commit: acf6103e3d010edb6491abc6c48e26aed31e27ff
 - Remaining uncertainty: none but the file's old Git commits may still contain the previous lab credential.
+---
+## Entry 19 — 2026-09-21
+- Symptom: with postgres stopped, curl to /ready returned nginx's own
+  504 HTML page instead of the app's 503 JSON response.
+- Hypothesis: DNS resolution for a stopped container's hostname takes
+  longer than nginx's original 3s proxy_read_timeout, so nginx cuts
+  the connection before the app's own (already correct) error
+  handling can respond.
+- Command: docker compose stop postgres; curl -i /ready;
+  docker compose logs app-01 app-02 --tail 5; docker exec app-01
+  getent hosts postgres; docker compose start postgres.
+- Actual output (before fix): nginx returned HTML 504 Gateway
+  Time-out to the client, while the app's own log showed the same
+  request completed internally in ~7.9s and correctly returned 503 —
+  nginx had already given up first.
+- Failed attempt: first assumed the app had no connection timeout
+  configured. Reading server.py showed connect_timeout=2 and
+  socket_connect_timeout=2 already set on both clients — that theory
+  was wrong. The real gap only became visible from the app's own
+  duration_ms log field.
+- Root cause: stopped-container DNS resolution takes longer in
+  practice than the app's connect_timeout bounds, and longer than
+  nginx's 3s proxy_read_timeout — nginx returns its own 504 before
+  the app's correct 503 can be delivered to the client.
+- Fix: split nginx.conf into two location blocks — default routes
+  (/, /health, /instance) keep a 3s proxy_read_timeout; /ready,
+  /records, /counter get a 10s proxy_read_timeout.
+- Retest evidence: docker compose stop postgres; curl -i /ready now
+  returns HTTP/1.1 503 SERVICE UNAVAILABLE with the app's real JSON
+  body ({"dependencies":{"postgres":"unavailable","redis":"ready"},
+  ...}), duration_ms 7142.118 — well within the new 10s window.
+- Related commit: <hash>
+- Remaining uncertainty: didn't investigate the exact resolver
+  mechanism producing ~7-8s specifically; the fix addresses the
+  client-visible symptom rather than the DNS timeout at its source.
