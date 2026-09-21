@@ -359,10 +359,10 @@ LINE 1: SELECT * FROM selftest;
   '{{json .NetworkSettings.Ports}}' now returns {"6379/tcp":null} —
   no host mapping. docker compose config confirms no ports: entry
   under the redis service.
-- Related commit: <hash>
+- Related commit: 7b4a39bfef6ac4aa749889899ad04251ef24603a
 - Remaining uncertainty: none
 ---
-## Entry 17 — 2026-09-21
+## Entry 17 — 2026-09-21 - 20:59:05
 - Symptom: Services lacked explicit restart policies/resource limits, and NGINX had no independent liveness endpoint.
 - Hypothesis: Add restart: unless-stopped, CPU/memory limits, and an NGINX-only healthcheck.
 - Command:
@@ -376,6 +376,26 @@ LINE 1: SELECT * FROM selftest;
 - Root cause: Required operational controls were missing from the service configuration.
 - Fix: Added unless-stopped restart policies, CPU/memory limits, and the /nginx-health endpoint with a Compose healthcheck.
 - Retest evidence: NGINX healthcheck returned ok and status healthy. Restart policies/resource limits still need separate runtime verification.
-- Related commit: [hash]
+- Related commit: b2b907d47b633bb4e173491d68ce5143445e82c2
 - Remaining uncertainty: Resource-limit values should be tuned using real production usage.
 ---
+## Entry 18 — 2026-09-21
+- Symptom: PostgreSQL password was stored directly in `docker-compose.yml`.
+- Hypothesis: Move the password to a runtime environment variable instead of storing it in Compose.
+- Command:
+  `docker compose config -q`
+  `docker compose up -d --force-recreate`
+  `docker compose ps`
+  `curl -s http://127.0.0.1:8080/ready`
+  `curl -H 'Content-Type: application/json' -d '{"title":"Secret test"}' http://127.0.0.1:8080/records`
+  `git grep -n 'POSTGRES_PASSWORD'`
+- Actual output: All services were healthy; `/ready` showed PostgreSQL and Redis `ready`; `POST /records` created record `id=10`; `git grep` returned no output.
+- Failed attempt: None.
+- Root cause: PostgreSQL credentials were hard-coded in Compose.
+- Fix: Replaced the hard-coded password with a runtime environment variable.
+- Retest evidence:
+  docker compose ps showed postgres and redis healthy and all five containers running.
+  GET /ready returned postgres and redis as "ready".
+  POST /records successfully created record id=11.
+  GET /records returned the newly created record.- Related commit: [hash]
+- Remaining uncertainty: none but the file's old Git commits may still contain the previous lab credential.
