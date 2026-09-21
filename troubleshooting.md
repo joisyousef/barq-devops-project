@@ -320,7 +320,26 @@ LINE 1: SELECT * FROM selftest;
   GET /counter → {"counter":10,...}
   GET /instance → 200 OK, alternating instance_id between app-01/app-02
   All previously-unavailable endpoints now succeed end-to-end.
-- Related commit: <hash>
+- Related commit: 7cc142b7357a87a578859359dbeae381054a6711
 - Remaining uncertainty: none — every value in config/app.env now
   matches the actual service configuration.
-
+---
+## Entry 15 — 2026-09-21
+- Symptom: redis ran with --save "" --appendonly no and no volume —
+  any recreate would wipe all data.
+- Hypothesis: task asks for persistence "where appropriate"; the
+  counter should survive restarts the same way postgres records do.
+- Command: docker exec redis redis-cli CONFIG GET appendonly
+- Actual output: appendonly no
+- Failed attempt: none.
+- Root cause: --save "" --appendonly no explicitly disabled and /data had no backing volume anyway.
+- Fix: enabled appendonly, added a named redis-data volume at /data.
+- Retest evidence: `docker exec redis redis-cli SET selftest hello
+  OK`
+  `docker compose up -d --force-recreate redis
+  [+] up 1/1
+  ✔ Container redis Started`
+  `docker exec redis redis-cli GET selftest
+   hello`
+- Related commit: <hash>
+- Remaining uncertainty: none.
