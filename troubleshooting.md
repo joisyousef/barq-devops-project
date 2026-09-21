@@ -246,7 +246,7 @@ LINE 1: SELECT * FROM selftest;
 - Related commit: 3a48c7a23f2fe0cb96f6a434dca3fb67c67acb8a
 - Remaining uncertainty: none
 ---
-## Entry 12 — 2026-09-20
+## Entry 12 — 2026-09-20 - 02:45:46
 - Symptom: /ready reported redis "unavailable"; /counter failed with
   {"error":"redis_unavailable"}.
 - Hypothesis: REDIS_URL in config/app.env used port 6380; redis
@@ -265,12 +265,12 @@ LINE 1: SELECT * FROM selftest;
 - Retest evidence: after docker compose up -d --force-recreate app-01
   app-02, /ready shows "redis":"ready"; /counter returns
   {"counter":1,"instance_id":"app-02",...}.
-- Related commit: <hash>
+- Related commit: 17faaf64f96bc323c3fd6047f4063508a5c29d07
 - Remaining uncertainty: none for redis specifically. Postgres, edited
   in the same file at the same time, is still unavailable — tracked
   separately below since it's a distinct, unresolved problem.
 ---
-## Entry 13 — 2026-09-20
+## Entry 13 — 2026-09-20 - 02:45:46
 - Symptom: after correcting the last character of the password in
   config/app.env's DATABASE_URL and force-recreating app-01/app-02,
   /ready still reports postgres "unavailable" and /records still
@@ -294,3 +294,33 @@ LINE 1: SELECT * FROM selftest;
 - Remaining uncertainty: need to check docker compose logs postgres
   for the actual error (auth failure vs. connection refused vs.
   something else) before guessing further.
+---
+## Entry 14 — 2026-09-20 (continued)
+- Actual output: after checking postgres's logs (no connection
+  attempts logged at all) and confirming nginx/network/TCP reachability
+  weren't the issue, went back to config/app.env and compared every
+  value in DATABASE_URL against the postgres service block again.
+  Found DATABASE_URL still said port 5433 — postgres actually listens
+  on 5432. Had fixed the password and the redis port earlier but
+  missed this one.
+- Failed attempt and what changed your thinking: first assumed the
+  password digit was the only wrong value. Fixing it and recreating
+  didn't help. Checked postgres's logs next and saw no connection
+  attempts at all, which pointed away from an auth failure and back
+  toward the connection string itself — that's when I re-checked
+  every value instead of just the one I'd already touched.
+- Root cause: config/app.env's DATABASE_URL used port 5433; postgres
+  listens on 5432.
+- Fix: corrected the port to 5432.
+- Retest evidence:
+  GET /ready → {"dependencies":{"postgres":"ready","redis":"ready"},
+  "status":"ready",...}
+  POST /records → {"record":{"id":4,"title":"Persistence proof"},...}
+  GET /records → returns all 4 records including the new one
+  GET /counter → {"counter":10,...}
+  GET /instance → 200 OK, alternating instance_id between app-01/app-02
+  All previously-unavailable endpoints now succeed end-to-end.
+- Related commit: <hash>
+- Remaining uncertainty: none — every value in config/app.env now
+  matches the actual service configuration.
+
