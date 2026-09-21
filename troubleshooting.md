@@ -453,6 +453,29 @@ LINE 1: SELECT * FROM selftest;
   no published host ports. PASS/FAIL per check, non-zero exit on any
   failure.
 - Retest evidence: exit code 0 after all 9 checks pass.
-- Related commit: <hash>
+- Related commit: 47910e3126539abfef9fa74e8d18cc2e14d9410e
 - Remaining uncertainty: none.
 ---
+## Entry 21 — 2026-09-21
+- Symptom: failure_test.py was a stub; no repeatable way to prove
+  the stack survives one backend going down.
+- Command: ./failure_test.py
+- Actual output: stopped app-01, sent 20 requests — 10 succeeded
+  (all served by app-02), 10 errored. app-01 recovered to healthy
+  after restart, and then served a request again successfully.
+- Failed attempt: none.
+- Root cause: n/a — implementation task.
+- Fix: implemented failure_test.py: stop app-01, send N requests to
+  /instance measuring success/error split and which instance served
+  each, restart app-01, poll for healthy status, then poll /instance
+  until app-01 is confirmed serving again.
+- Retest evidence: PASS at every stage (traffic continued, app-01
+  recovered, recovered app-01 served a request). exit code 0.
+- Related commit: <hash>
+- Remaining uncertainty: the 10/10 success/error split is not a bug —
+  see decisions.md Decision 6. nginx.conf's upstream has
+  max_fails=0, so it keeps sending traffic to app-01 even while it's
+  down, and proxy_next_upstream off means it doesn't retry those
+  failed requests on app-02. This is why exactly half of requests
+  failed rather than nginx routing everything to the healthy
+  instance automatically.

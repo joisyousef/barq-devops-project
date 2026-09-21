@@ -50,5 +50,13 @@ storage and any other meaningful choices.
 - Why: with postgres stopped, a real dependency-check request took ~8s to fail (DNS resolution for a stopped container's hostname doesn't fail fast), longer than nginx's original 3s — nginx was returning its own generic 504 before the app's correct 503 logic could run.
 - Alternative: raise proxy_read_timeout globally for every route.
 - Trade-off: a global increase would let a genuinely hung, non-dependency request hold a connection open much longer instead of failing fast; splitting by route keeps fast endpoints fast.
-- Evidence / commit: 
+- Evidence / commit: aa7c7defa76eb9ddd5061d5e4ffa31386ca83958
 - Production improvement: fix the DNS timeout at its source (resolver tuning or a short-circuiting health check) so every endpoint can stay on one tight timeout.   
+---
+## Decision 6 — Left nginx's upstream max_fails=0 unchanged
+- Choice: did not change nginx.conf's max_fails=0 / proxy_next_upstream off settings after discovering they cause exactly half of requests to fail during a single-backend outage (confirmed via failure_test.py: 10/20 failed, all landing on the stopped app-01).
+- Why: the task asks to measure traffic and errors during a failure, which implies errors are expected and worth capturing — not eliminated. Changing this would turn the failure test into a near-zero-error scenario, which is less informative as a demonstration.
+- Alternative: set max_fails=1 fail_timeout=5s (or similar) so nginx actively ejects a failed backend from rotation after one failure, achieving near-zero-error failover.
+- Trade-off: the current config makes real, visible errors during an outage (good for demonstrating detection), but it's not what a production reverse proxy would actually want — a real deployment should eject a failed backend automatically.
+- Evidence / commit: 
+- Production improvement: set max_fails/fail_timeout (or move to active health-check-based upstream ejection) so nginx stops routing to a known-down backend instead of continuing to send it traffic.
