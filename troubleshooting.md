@@ -324,7 +324,7 @@ LINE 1: SELECT * FROM selftest;
 - Remaining uncertainty: none — every value in config/app.env now
   matches the actual service configuration.
 ---
-## Entry 15 — 2026-09-21
+## Entry 15 — 2026-09-21 - 13:41:49
 - Symptom: redis ran with --save "" --appendonly no and no volume —
   any recreate would wipe all data.
 - Hypothesis: task asks for persistence "where appropriate"; the
@@ -341,5 +341,23 @@ LINE 1: SELECT * FROM selftest;
   ✔ Container redis Started`
   `docker exec redis redis-cli GET selftest
    hello`
-- Related commit: <hash>
+- Related commit: fdb96c56630bc2b3088386071ec366d4b7e9578f
 - Remaining uncertainty: none.
+---
+## Entry 16 — 2026-09-21
+- Symptom: redis's port 6379 was published to the host at
+  127.0.0.1:16379, which the task disallows.
+- Hypothesis: straightforward — remove ports:, service-name access
+  on the backend network is unaffected.
+- Command: docker inspect redis --format '{{json .NetworkSettings.Ports}}'
+- Actual output: showed a host mapping before the fix (confirmed via
+  docker compose config's resolved ports: block).
+- Failed attempt: none.
+- Root cause: unnecessary ports: mapping on the redis service.
+- Fix: removed the ports: line entirely.
+- Retest evidence: docker inspect redis --format
+  '{{json .NetworkSettings.Ports}}' now returns {"6379/tcp":null} —
+  no host mapping. docker compose config confirms no ports: entry
+  under the redis service.
+- Related commit: <hash>
+- Remaining uncertainty: none
