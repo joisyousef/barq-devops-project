@@ -34,3 +34,10 @@ You may use AI and external resources. You must understand and demonstrate the w
   docker exec nginx getent hosts postgres
   docker exec nginx getent hosts redis  
 - Related commit: 3b7a19d64db5a53026e5c81c4571bb1f0d16b3c6
+---
+- Tool/model: Claude (Anthropic), claude.ai chat
+- Purpose: asked why stopping postgres produced nginx's own 504 error instead of the app's documented 503 response.
+- Files or decisions affected: nginx/nginx.conf, troubleshooting.md.
+- What you changed or rejected: the first suggested theory was that the app had no connection timeout configured.
+- How you independently verified it: ran the actual stop-postgres/curl/logs sequence myself and read the real duration_ms value before accepting any explanation.
+- Related commit: aa7c7defa76eb9ddd5061d5e4ffa31386ca83958

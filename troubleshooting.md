@@ -401,7 +401,7 @@ LINE 1: SELECT * FROM selftest;
 - Related commit: acf6103e3d010edb6491abc6c48e26aed31e27ff
 - Remaining uncertainty: none but the file's old Git commits may still contain the previous lab credential.
 ---
-## Entry 19 — 2026-09-21
+## Entry 19 — 2026-09-21 - 22:53:28
 - Symptom: with postgres stopped, curl to /ready returned nginx's own
   504 HTML page instead of the app's 503 JSON response.
 - Hypothesis: DNS resolution for a stopped container's hostname takes
@@ -431,7 +431,7 @@ LINE 1: SELECT * FROM selftest;
   returns HTTP/1.1 503 SERVICE UNAVAILABLE with the app's real JSON
   body ({"dependencies":{"postgres":"unavailable","redis":"ready"},
   ...}), duration_ms 7142.118 — well within the new 10s window.
-- Related commit: <hash>
+- Related commit: aa7c7defa76eb9ddd5061d5e4ffa31386ca83958
 - Remaining uncertainty: didn't investigate the exact resolver
-  mechanism producing ~7-8s specifically; the fix addresses the
+  mechanism producing ~7-8s specifically the fix addresses the
   client-visible symptom rather than the DNS timeout at its source.
