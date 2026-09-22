@@ -479,3 +479,26 @@ LINE 1: SELECT * FROM selftest;
   failed requests on app-02. This is why exactly half of requests
   failed rather than nginx routing everything to the healthy
   instance automatically.
+---
+## Entry 22 — 2026-09-22
+- Symptom: real GitHub Actions run printed "unknown filter health"
+  repeatedly and timed out, even though the final docker compose ps
+  snapshot in the same log showed all 5 containers as (healthy).
+- Hypothesis: docker compose ps --filter "health=healthy" isn't a
+  valid filter — compose ps only supports filtering by status, not
+  health, so the filter silently matched nothing every time.
+- Command: read the actual CI log output; confirmed against Docker
+  Compose CLI docs that --filter only supports status=... for
+  compose ps.
+- Actual output: "unknown filter health" x30, then timeout, despite
+  the stack being genuinely fully healthy per docker compose ps at
+  the bottom of the same log.
+- Failed attempt: none
+- Root cause: invalid filter syntax in the CI wait step.
+- Fix: replaced the ps --filter approach with per-container
+  docker inspect --format '{{.State.Health.Status}}' checks, the
+  same method already proven throughout this project.
+- Retest evidence: [paste real local loop output, then the next
+  real Actions run URL once green]
+- Related commit: <hash>
+- Remaining uncertainty: none.
