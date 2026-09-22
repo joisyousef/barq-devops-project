@@ -41,3 +41,15 @@ You may use AI and external resources. You must understand and demonstrate the w
 - What you changed or rejected: the first suggested theory was that the app had no connection timeout configured.
 - How you independently verified it: ran the actual stop-postgres/curl/logs sequence myself and read the real duration_ms value before accepting any explanation.
 - Related commit: aa7c7defa76eb9ddd5061d5e4ffa31386ca83958
+---
+- Tool/model: Claude (Anthropic), claude.ai chat
+- Purpose: asked for an implementation of both scripts against the task's stated
+  requirements (bounded waits, PASS/FAIL, non-zero exit).
+- Files or decisions affected: validate.py, failure_test.py.
+- What you changed or rejected: ran both scripts as given found and fixed a real bug
+  myself in CI where the isolation check needed to also treat a timeout as proof of
+  isolation, since the GitHub runner's DNS behaves differently than my local machine.
+- How you independently verified it: ran both scripts locally with real PASS/FAIL output
+  before ever relying on them in CI.
+- Related commit: dd1e8768233070e2767e6127ba7a7049bd2475bf / 47910e3126539abfef9fa74e8d18cc2e14d9410e
+---

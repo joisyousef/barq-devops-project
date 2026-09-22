@@ -480,7 +480,7 @@ LINE 1: SELECT * FROM selftest;
   failed rather than nginx routing everything to the healthy
   instance automatically.
 ---
-## Entry 22 — 2026-09-22
+## Entry 22 — 2026-09-22 - 05:06:28
 - Symptom: real GitHub Actions run printed "unknown filter health"
   repeatedly and timed out, even though the final docker compose ps
   snapshot in the same log showed all 5 containers as (healthy).
@@ -500,5 +500,36 @@ LINE 1: SELECT * FROM selftest;
   same method already proven throughout this project.
 - Retest evidence: [paste real local loop output, then the next
   real Actions run URL once green]
-- Related commit: <hash>
+- Related commit: e22d06ae39abb321018ad2a441195945646c6451
 - Remaining uncertainty: none.
+---
+## Entry 23 — 2026-09-22 - 05:13:22
+- Symptom: real GitHub Actions run failed two validate.py checks —
+  "nginx cannot resolve postgres/redis" — with the actual error being
+  a 10-second timeout on the docker exec getent command, not a
+  successful resolution. Every other check (all endpoints, both
+  backends, no published ports) passed cleanly in the same run.
+- Hypothesis: on the GitHub runner, a DNS query for a name nginx has
+  no network path to hangs before giving up, instead of failing
+  instantly the way it does locally (confirmed back in Entry 7). This
+  is a difference in how the runner's Docker networking/DNS behaves,
+  not a real isolation problem — every other check in the same run
+  proves nginx and the whole stack were working fine.
+- Command: read the real Actions step output for python3 validate.py.
+- Actual output: FAIL: nginx cannot resolve postgres -> Command
+  [...] timed out after 10 seconds (same for redis).
+- Failed attempt: none — this is the first real CI failure that was
+  specific to the CI environment rather than an actual bug in the
+  stack or the workflow file.
+- Root cause: validate.py's check_isolation only treated an immediate
+  failed/empty getent result as proof of isolation; it didn't account
+  for the case where the DNS query hangs and times out instead of
+  failing fast, which is what happens on the GitHub-hosted runner.
+- Fix: updated check_isolation to also treat a subprocess.TimeoutExpired
+  as confirming isolation (no answer within the timeout means no
+  network path exists), not just an immediate empty/failed result.
+- Retest evidence: local python3 validate.py still shows RESULT: PASS.
+  https://github.com/joisyousef/barq-devops-project/actions/runs/35678679547/workflow
+- Related commit: a6cb03d5c7e0f03987c1530eb73b170ce4138617
+- Remaining uncertainty: treating a timeout as "isolated" is a
+  reasonable but not airtight assumption 
