@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create environment files
+        run: |
+          cp .env.example .env
+          cp config/app.env.example config/app.env
+
+      - name: Compose syntax check
+        run: docker compose config -q
+
+      - name: Build
+        run: docker compose build
+
+      - name: Start
+        run: docker compose up -d
+
+      - name: Wait for all services healthy
+        run: |
+          for i in $(seq 1 30); do
+            total=$(docker compose ps --format '{{.Names}}' | wc -l)
+            healthy=$(docker compose ps --filter "health=healthy" --format '{{.Names}}' | wc -l)
+            echo "healthy: $healthy / $total"
+            if [ "$healthy" -eq "$total" ] && [ "$total" -gt 0 ]; then
+              echo "All services healthy"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Timed out waiting for services to become healthy"
+              docker compose ps
+              docker compose logs
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Validate
+        run: python3 validate.py
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
