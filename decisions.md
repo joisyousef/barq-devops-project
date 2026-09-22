@@ -60,3 +60,11 @@ storage and any other meaningful choices.
 - Trade-off: the current config makes real, visible errors during an outage (good for demonstrating detection), but it's not what a production reverse proxy would actually want — a real deployment should eject a failed backend automatically.
 - Evidence / commit: dd1e8768233070e2767e6127ba7a7049bd2475bf
 - Production improvement: set max_fails/fail_timeout (or move to active health-check-based upstream ejection) so nginx stops routing to a known-down backend instead of continuing to send it traffic.
+---
+## Decision 7 - Added app-03 
+- Choice: Added a third Flask backend (app-03) to the stack and updated validate.py to expect three distinct instance IDs (app-01, app-02, app-03) from /instance.
+- Why: The video task explicitly requires: “Add a third app instance live. Prove all three respond rerun validation.” This demonstrates that NGINX correctly load-balances across multiple backends and that the validation harness can verify all of them.
+- Alternative: Keep only two backends (app-01, app-02) and skip the “third instance” requirement (would not satisfy the task).
+- Trade-off: I turend off the video as it came to 18 minutes and that might affect the score but everything is fixed and running perfectly now 
+- Evidence / commit: b1e7df3d3c218b74328a5ac61ac002bbcced0a93
+- Production improvement: Use an orchestration platform like Kubernetes to scale the number of backend replicas dynamically instead of hard-coding app-01, app-02, app-03 in Compose.

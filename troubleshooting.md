@@ -554,7 +554,7 @@ RESULT: FAIL (1 check(s) failed: both backends respond via /instance)
 - Failed attempt: two times 
 - Root cause: validate.py's check_both_backends only for app-01 and app-02
 - Fix: updated check_both_backends to also check for app-03
-- Retest evidence: not created yet
-- Related commit: not created yet
+- Retest evidence: https://github.com/joisyousef/barq-devops-project/actions/runs/35762296298/job/106863058350
+- Related commit: b1e7df3d3c218b74328a5ac61ac002bbcced0a93
 - Remaining uncertainty: after editing the validate.py locally with the updated app-03
   I am only worried on github action will cause any error or not
