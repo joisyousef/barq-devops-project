@@ -11,7 +11,7 @@ import time
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 
-BASE_URL = os.environ.get("VALIDATE_URL", "http://127.0.0.1:8080")
+BASE_URL = os.environ.get("VALIDATE_URL", "http://127.0.0.1:8090")
 TIMEOUT = 5
 RETRIES = 10
 RETRY_DELAY = 1
