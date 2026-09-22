@@ -533,3 +533,28 @@ LINE 1: SELECT * FROM selftest;
 - Related commit: a6cb03d5c7e0f03987c1530eb73b170ce4138617
 - Remaining uncertainty: treating a timeout as "isolated" is a
   reasonable but not airtight assumption 
+---
+## Entry 23 — 2026-09-22 - 05:13:22
+- Symptom: real GitHub Actions run failed two validate.py checks the
+  added app-03 
+- Hypothesis: I didn't add in the script to check for the new app "app-03"
+  as it only was checking for app-01 and app-02
+- Command: added app-03 `assert seen == {"app-01", "app-02", "app-03"}, f"only saw: {seen}"`
+- Actual output: PASS: public access on /
+PASS: /health
+PASS: /ready (postgres + redis)
+PASS: /records create + list
+PASS: /counter
+FAIL: both backends respond via /instance -> only saw: {'app-03', 'app-02', 'app-01'}
+PASS: nginx cannot resolve postgres
+PASS: nginx cannot resolve redis
+PASS: no published db/cache ports
+
+RESULT: FAIL (1 check(s) failed: both backends respond via /instance)
+- Failed attempt: two times 
+- Root cause: validate.py's check_both_backends only for app-01 and app-02
+- Fix: updated check_both_backends to also check for app-03
+- Retest evidence: not created yet
+- Related commit: not created yet
+- Remaining uncertainty: after editing the validate.py locally with the updated app-03
+  I am only worried on github action will cause any error or not

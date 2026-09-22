@@ -81,7 +81,7 @@ def check_both_backends():
     for _ in range(10):
         body = wait_for("/instance")
         seen.add(body.get("instance_id"))
-    assert seen == {"app-01", "app-02"}, f"only saw: {seen}"
+    assert seen == {"app-01", "app-02", "app-03"}, f"only saw: {seen}"
 
 def check_isolation(target):
     try:
