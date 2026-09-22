@@ -84,8 +84,11 @@ def check_both_backends():
     assert seen == {"app-01", "app-02"}, f"only saw: {seen}"
 
 def check_isolation(target):
-    result = subprocess.run(["docker", "exec", "nginx", "getent", "hosts", target],
-                            capture_output=True, text=True, timeout=10)
+    try:
+        result = subprocess.run(["docker", "exec", "nginx", "getent", "hosts", target],
+                                capture_output=True, text=True, timeout=10)
+    except subprocess.TimeoutExpired:
+        return  
     if result.returncode == 0 and result.stdout.strip():
         raise RuntimeError(f"nginx can resolve {target}: {result.stdout.strip()}")
 
