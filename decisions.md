@@ -58,5 +58,5 @@ storage and any other meaningful choices.
 - Why: the task asks to measure traffic and errors during a failure, which implies errors are expected and worth capturing — not eliminated. Changing this would turn the failure test into a near-zero-error scenario, which is less informative as a demonstration.
 - Alternative: set max_fails=1 fail_timeout=5s (or similar) so nginx actively ejects a failed backend from rotation after one failure, achieving near-zero-error failover.
 - Trade-off: the current config makes real, visible errors during an outage (good for demonstrating detection), but it's not what a production reverse proxy would actually want — a real deployment should eject a failed backend automatically.
-- Evidence / commit: 
+- Evidence / commit: dd1e8768233070e2767e6127ba7a7049bd2475bf
 - Production improvement: set max_fails/fail_timeout (or move to active health-check-based upstream ejection) so nginx stops routing to a known-down backend instead of continuing to send it traffic.

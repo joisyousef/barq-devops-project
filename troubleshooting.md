@@ -471,7 +471,7 @@ LINE 1: SELECT * FROM selftest;
   until app-01 is confirmed serving again.
 - Retest evidence: PASS at every stage (traffic continued, app-01
   recovered, recovered app-01 served a request). exit code 0.
-- Related commit: <hash>
+- Related commit: dd1e8768233070e2767e6127ba7a7049bd2475bf
 - Remaining uncertainty: the 10/10 success/error split is not a bug —
   see decisions.md Decision 6. nginx.conf's upstream has
   max_fails=0, so it keeps sending traffic to app-01 even while it's
